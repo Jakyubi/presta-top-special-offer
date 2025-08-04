@@ -59,6 +59,9 @@ class SpecialOffers extends Module
         
         $this->context->smarty->assign([
             'specialoffers_enable' => $enabled,
+            'specialoffers_text_color' => Configuration::get('SPECIALOFFERS_TEXT_COLOR'),
+            'specialoffers_bg_color' => Configuration::get('SPECIALOFFERS_BG_COLOR'),
+            'specialoffers_text' => Configuration::get('SPECIALOFFERS_TEXT'),
         ]);
         
         return $this->display(__FILE__, 'views/templates/template.tpl');
@@ -73,22 +76,53 @@ class SpecialOffers extends Module
     {
         if(Tools::isSubmit('submit'.$this->name)){
             $enabled = Tools::getValue('SPECIALOFFERS_ENABLE');
+            $textColor = Tools::getValue('SPECIALOFFERS_TEXT_COLOR');
+            $bgColor = Tools::getValue('SPECIALOFFERS_BG_COLOR');
+            $text = Tools::getValue('SPECIALOFFERS_TEXT');
 
             Configuration::updateValue('SPECIALOFFERS_ENABLE', $enabled);
+            Configuration::updateValue('SPECIALOFFERS_TEXT_COLOR', $textColor);
+            Configuration::updateValue('SPECIALOFFERS_BG_COLOR', $bgColor);
+            Configuration::updateValue('SPECIALOFFERS_TEXT', $text, true);
         }
-
         return $this->displayForm();
     }
 
     public function displayForm()
     {
-        $form = [
+        $form_style = [
+            'form' => [
+                'legend' => [
+                    'title' => $this->l('Colors'),
+                ],
+                'input' => [
+                    [ // text color
+                        'type' => 'color',
+                        'label' => $this->l('Text color'),
+                        'name' => 'SPECIALOFFERS_TEXT_COLOR',
+                    ],
+                    [ // background color
+                        'type' => 'color',
+                        'label' => $this->l('Background color'),
+                        'name' => 'SPECIALOFFERS_BG_COLOR',
+                    ],
+                ],
+                'submit' => [
+                    'title' => $this->l('Save'),
+                    'class' => 'btn btn-default pull-right',
+                ],
+            ],
+
+        ];
+
+
+        $form_settings = [
             'form' => [
                 'legend' => [
                     'title' => $this->l('Settings'),
                 ],
                 'input' => [
-                    [ //on/off
+                    [ // on/off
                         'type' => 'switch',
                         'label' => $this->l('Enable module'),
                         'name' => 'SPECIALOFFERS_ENABLE',
@@ -106,6 +140,14 @@ class SpecialOffers extends Module
                             ]
                         ],
                     ],
+                    [
+                        'type' => 'textarea',
+                        'label' => $this->l('Text to display'),
+                        'name' => 'SPECIALOFFERS_TEXT',
+                        'autoload_rte' => false,
+                        'rows' => 10,
+                        'cols' => 50,
+                    ],
                 ],
                 'submit' => [
                     'title' => $this->l('Save'),
@@ -113,6 +155,7 @@ class SpecialOffers extends Module
                 ],
             ],
         ];
+
 
         $helper = new HelperForm();
 
@@ -127,22 +170,18 @@ class SpecialOffers extends Module
         $helper->fields_value['SPECIALOFFERS_ENABLE'] = 
         Tools::getValue('SPECIALOFFERS_ENABLE', Configuration::get('SPECIALOFFERS_ENABLE'));
 
+        $helper->fields_value['SPECIALOFFERS_TEXT_COLOR'] =
+        Tools::getValue('SPECIALOFFERS_TEXT_COLOR', Configuration::get('SPECIALOFFERS_TEXT_COLOR'));
 
-        return $helper->generateForm([$form]);
+        $helper->fields_value['SPECIALOFFERS_BG_COLOR'] =
+        Tools::getValue('SPECIALOFFERS_BG_COLOR', Configuration::get('SPECIALOFFERS_BG_COLOR'));
+
+        $helper->fields_value['SPECIALOFFERS_TEXT'] =
+        Tools::getValue('SPECIALOFFERS_TEXT', Configuration::get('SPECIALOFFERS_TEXT'));
+
+        return $helper->generateForm([$form_style, $form_settings]);
 
     }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
