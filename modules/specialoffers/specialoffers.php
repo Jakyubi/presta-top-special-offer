@@ -45,10 +45,7 @@ class SpecialOffers extends Module
             parent::uninstall()
             && Configuration::deleteByName('SPECIALOFFERS_NAME')
             );
-    }
-            
-
-                
+    }   
 
     public function hookDisplayBanner($params)
     {
@@ -70,27 +67,115 @@ class SpecialOffers extends Module
     }
     
     
+    public function installDb(){ // TODO
 
+    }
     
     public function getContent()
     {
-        if(Tools::isSubmit('submit'.$this->name)){
+        if(Tools::isSubmit('submitSettingsForm')){
+            $text = Tools::getValue('SPECIALOFFERS_TEXT');
             $enabled = Tools::getValue('SPECIALOFFERS_ENABLE');
+            Configuration::updateValue('SPECIALOFFERS_TEXT', $text, true);
+            Configuration::updateValue('SPECIALOFFERS_ENABLE', $enabled);
+        }
+
+        if(Tools::isSubmit('submitStyleForm')){
             $textColor = Tools::getValue('SPECIALOFFERS_TEXT_COLOR');
             $bgColor = Tools::getValue('SPECIALOFFERS_BG_COLOR');
-            $text = Tools::getValue('SPECIALOFFERS_TEXT');
 
-            Configuration::updateValue('SPECIALOFFERS_ENABLE', $enabled);
             Configuration::updateValue('SPECIALOFFERS_TEXT_COLOR', $textColor);
             Configuration::updateValue('SPECIALOFFERS_BG_COLOR', $bgColor);
-            Configuration::updateValue('SPECIALOFFERS_TEXT', $text, true);
         }
-        return $this->displayForm();
+
+        $active_tab = 'settings';
+        if (Tools::isSubmit('submitStyleForm')) {
+            $active_tab = 'style';
+        }
+
+        $content = // WORK IN PROGRESS
+            '
+            <ul class="nav nav-tabs" role="tablist">
+                <li class="'.($active_tab == 'settings' ? 'active' : '').'">
+                    <a href="#tab-settings" data-toggle="tab">'.$this->l('Settings').'</a>
+                </li>
+                <li class="'.($active_tab == 'style' ? 'active' : '').'">
+                    <a href="#tab-style" data-toggle="tab">'.$this->l('Style').'</a>
+                </li>
+            </ul>
+            <div class="tab-content" >
+                <div class="tab-pane '.($active_tab == 'settings' ? 'active' : '').'" id="tab-settings">
+                    '.$this->displaySettingsForm().'
+                </div>
+                <div class="tab-pane '.($active_tab == 'style' ? 'active' : '').'" id="tab-style">
+                    '.$this->displayStyleForm().'
+                </div>
+            </div>';
+
+        return $content;
+
     }
 
-    public function displayForm()
+
+    public function displaySettingsForm()
     {
-        $form_style = [
+        $form = [
+            'form' => [
+                'legend' => [
+                    'title' => $this->l('Settings'),
+                ],
+                'input' => [
+                    [ // on/off
+                        'type' => 'switch',
+                        'label' => $this->l('Enable module'),
+                        'name' => 'SPECIALOFFERS_ENABLE',
+                        'is_bool' => true,
+                        'values' => [
+                            [
+                                'id' => 'active_on',
+                                'value' => 1,
+                                'label' => $this->l('Enabled')
+                            ],
+                            [
+                                'id' => 'active_off',
+                                'value' => 0,
+                                'label' => $this->l('Disabled')
+                            ]
+                        ],
+                    ],
+                    [ // text input
+                        'type' => 'textarea',
+                        'label' => $this->l('Text to display'),
+                        'name' => 'SPECIALOFFERS_TEXT',
+                        'autoload_rte' => false,
+                        'rows' => 10,
+                        'cols' => 50,
+                    ],
+                ],
+                'submit' => [
+                    'title' => $this->l('Save'),
+                    'class' => 'btn btn-default pull-right',
+                ],
+            ],
+        ];
+
+        $helper = $this->getHelper();
+        $helper->submit_action = 'submitSettingsForm';
+        
+        $helper->fields_value['SPECIALOFFERS_ENABLE'] = 
+        Tools::getValue('SPECIALOFFERS_ENABLE', Configuration::get('SPECIALOFFERS_ENABLE'));
+
+
+        $helper->fields_value['SPECIALOFFERS_TEXT'] =
+        Tools::getValue('SPECIALOFFERS_TEXT', Configuration::get('SPECIALOFFERS_TEXT'));
+
+        return $helper->generateForm([$form]);
+
+    }
+
+    public function displayStyleForm()
+    {
+        $form = [
             'form' => [
                 'legend' => [
                     'title' => $this->l('Colors'),
@@ -115,60 +200,8 @@ class SpecialOffers extends Module
 
         ];
 
-
-        $form_settings = [
-            'form' => [
-                'legend' => [
-                    'title' => $this->l('Settings'),
-                ],
-                'input' => [
-                    [ // on/off
-                        'type' => 'switch',
-                        'label' => $this->l('Enable module'),
-                        'name' => 'SPECIALOFFERS_ENABLE',
-                        'is_bool' => true,
-                        'values' => [
-                            [
-                                'id' => 'active_on',
-                                'value' => 1,
-                                'label' => $this->l('Enabled')
-                            ],
-                            [
-                                'id' => 'active_off',
-                                'value' => 0,
-                                'label' => $this->l('Disabled')
-                            ]
-                        ],
-                    ],
-                    [
-                        'type' => 'textarea',
-                        'label' => $this->l('Text to display'),
-                        'name' => 'SPECIALOFFERS_TEXT',
-                        'autoload_rte' => false,
-                        'rows' => 10,
-                        'cols' => 50,
-                    ],
-                ],
-                'submit' => [
-                    'title' => $this->l('Save'),
-                    'class' => 'btn btn-default pull-right',
-                ],
-            ],
-        ];
-
-
-        $helper = new HelperForm();
-
-        $helper->table = $this->table;
-        $helper->name_controller = $this->name;
-        $helper->token = Tools::getAdminTokenLite('AdminModules');
-        $helper->currentIndex = AdminController::$currentIndex . '&' . http_build_query(['configure' => $this->name]);
-        $helper->submit_action = 'submit' . $this->name;
-
-        $helper->default_form_language = (int) Configuration::get('PS_LANG_DEFAULT');
-
-        $helper->fields_value['SPECIALOFFERS_ENABLE'] = 
-        Tools::getValue('SPECIALOFFERS_ENABLE', Configuration::get('SPECIALOFFERS_ENABLE'));
+        $helper = $this->getHelper();
+        $helper->submit_action = 'submitStyleForm';
 
         $helper->fields_value['SPECIALOFFERS_TEXT_COLOR'] =
         Tools::getValue('SPECIALOFFERS_TEXT_COLOR', Configuration::get('SPECIALOFFERS_TEXT_COLOR'));
@@ -176,16 +209,31 @@ class SpecialOffers extends Module
         $helper->fields_value['SPECIALOFFERS_BG_COLOR'] =
         Tools::getValue('SPECIALOFFERS_BG_COLOR', Configuration::get('SPECIALOFFERS_BG_COLOR'));
 
-        $helper->fields_value['SPECIALOFFERS_TEXT'] =
-        Tools::getValue('SPECIALOFFERS_TEXT', Configuration::get('SPECIALOFFERS_TEXT'));
-
-        return $helper->generateForm([$form_style, $form_settings]);
-
+        return $helper->generateForm([$form]);
     }
 
+    public function getHelper()
+    {
+        $helper = new HelperForm();
+        //$helper->module = $this;
+        $helper->table = $this->table;
+        $helper->name_controller = $this->name;
+        $helper->token = Tools::getAdminTokenLite('AdminModules');
+        $helper->currentIndex = AdminController::$currentIndex . '&' . http_build_query(['configure' => $this->name]);
+        $helper->submit_action = 'submit' . $this->name;
+        $helper->default_form_language = (int) Configuration::get('PS_LANG_DEFAULT');
+        
+        return $helper;
+    }
 
-
-
+    
+    
+    
+    
 
 
 }
+
+
+
+
