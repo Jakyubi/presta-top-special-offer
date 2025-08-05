@@ -34,18 +34,41 @@ class SpecialOffers extends Module
     {
         return(
             parent::install()
+            && $this->installDb()
             && $this->registerHook('displayBanner')
             && Configuration::updateValue('SPECIALOFFERS_NAME', 'Special offers')
         );
     }
 
+    public function installDb()
+    {
+        $sql = 
+            'CREATE TABLE IF NOT EXISTS `'._DB_PREFIX_.'specialoffers_banners`(
+            `id_banner` int(11) unsigned NOT NULL AUTO_INCREMENT,
+            `text` TEXT,
+            `enabled` TINYINT(1) DEFAULT 1,
+            PRIMARY KEY (`id_banner`)
+            ) ENGINE='._MYSQL_ENGINE_.' DEFAULT CHARSET=utf8';
+
+            return Db::getInstance()->execute($sql);
+    }
+
+
     public function uninstall()
     {
         return(
             parent::uninstall()
+            && $this->uninstallDb()
             && Configuration::deleteByName('SPECIALOFFERS_NAME')
             );
     }   
+
+    public function uninstallDb()
+    {
+        $sql = 'DROP TABLE IF EXISTS `'._DB_PREFIX_.'specialoffers_banners`';
+        return Db::getInstance()->execute($sql);
+    }
+
 
     public function hookDisplayBanner($params)
     {
@@ -53,31 +76,33 @@ class SpecialOffers extends Module
         if(!$enabled){
             return '';
         }
-        
+
+        $banners = $this->getBanners();
+
         $this->context->smarty->assign([
-            'specialoffers_enable' => $enabled,
             'specialoffers_text_color' => Configuration::get('SPECIALOFFERS_TEXT_COLOR'),
             'specialoffers_bg_color' => Configuration::get('SPECIALOFFERS_BG_COLOR'),
-            'specialoffers_text' => Configuration::get('SPECIALOFFERS_TEXT'),
+            'banners' => $banners,
         ]);
-        
-        return $this->display(__FILE__, 'views/templates/template.tpl');
-        
-        
-    }
-    
-    
-    public function installDb(){ // TODO
 
+        return $this->display(__FILE__, 'views/templates/template.tpl');
     }
+    
     
     public function getContent()
     {
         if(Tools::isSubmit('submitSettingsForm')){
             $text = Tools::getValue('SPECIALOFFERS_TEXT');
             $enabled = Tools::getValue('SPECIALOFFERS_ENABLE');
-            Configuration::updateValue('SPECIALOFFERS_TEXT', $text, true);
+            //Configuration::updateValue('SPECIALOFFERS_TEXT', $text, true);
             Configuration::updateValue('SPECIALOFFERS_ENABLE', $enabled);
+
+            if(!empty(trim($text))){
+                Db::getInstance()->insert('specialoffers_banners', [
+                    'text' => pSQL($text),
+                    'enabled' => 1
+                ]);
+            }
         }
 
         if(Tools::isSubmit('submitStyleForm')){
@@ -88,14 +113,18 @@ class SpecialOffers extends Module
             Configuration::updateValue('SPECIALOFFERS_BG_COLOR', $bgColor);
         }
 
+        if(Tools::isSUbmit('deleteBanner')){
+            $idBanner = (int)Tools::getValue('deleteBanner');
+            Db::getInstance()->delete('specialoffers_banners', 'id_banner='.(int)$idBanner);
+        }
+
         $active_tab = 'settings';
         if (Tools::isSubmit('submitStyleForm')) {
             $active_tab = 'style';
         }
 
         $content = // WORK IN PROGRESS
-            '
-            <ul class="nav nav-tabs" role="tablist">
+            '<ul class="nav nav-tabs" role="tablist">
                 <li class="'.($active_tab == 'settings' ? 'active' : '').'">
                     <a href="#tab-settings" data-toggle="tab">'.$this->l('Settings').'</a>
                 </li>
@@ -112,9 +141,23 @@ class SpecialOffers extends Module
                 </div>
             </div>';
 
+        $banners = $this->getBanners();
+
+        foreach ($banners as $banner){
+            $content .= '
+            <div>
+            '.htmlspecialchars($banner['text']).'
+            <a href="'.$this->context->link->getAdminLink('AdminModules', true, [], [
+                'configure' => $this->name,
+                'deleteBanner' => $banner['id_banner']
+            ]).'">'.$this->l('Delete').'</a>
+        </div>';
+        }
+
         return $content;
 
     }
+
 
 
     public function displaySettingsForm()
@@ -165,9 +208,11 @@ class SpecialOffers extends Module
         $helper->fields_value['SPECIALOFFERS_ENABLE'] = 
         Tools::getValue('SPECIALOFFERS_ENABLE', Configuration::get('SPECIALOFFERS_ENABLE'));
 
-
-        $helper->fields_value['SPECIALOFFERS_TEXT'] =
-        Tools::getValue('SPECIALOFFERS_TEXT', Configuration::get('SPECIALOFFERS_TEXT'));
+        /*
+                $helper->fields_value['SPECIALOFFERS_TEXT'] =
+                Tools::getValue('SPECIALOFFERS_TEXT', Configuration::get('SPECIALOFFERS_TEXT'));
+        */
+        $helper->fields_value['SPECIALOFFERS_TEXT'] = '';
 
         return $helper->generateForm([$form]);
 
@@ -226,14 +271,11 @@ class SpecialOffers extends Module
         return $helper;
     }
 
-    
-    
-    
-    
-
+    public function getBanners()
+    {
+        return Db::getInstance()->executeS('SELECT * FROM `'._DB_PREFIX_.'specialoffers_banners`');
+    }
 
 }
-
-
 
 

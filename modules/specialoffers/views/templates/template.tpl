@@ -1,11 +1,12 @@
-{if $specialoffers_enable}
-
-    <div class="specialoffers-container">
-        <h2 style="
+{if $banners}
+<div class="special-offers-wrapper">
+    {foreach $banners as $banner}
+        <div class="special-offer-item" style="
         color:{$specialoffers_text_color|escape:'html':'UTF-8'};
         background-color:{$specialoffers_bg_color|escape:'html':'UTF-8'};
-        text-align:center
-        ">{$specialoffers_text nofilter}</h2>
-    </div>
-
+        text-align:center">
+            {$banner.text nofilter}
+        </div>
+    {/foreach}
+</div>
 {/if}
